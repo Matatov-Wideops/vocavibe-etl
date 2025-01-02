@@ -1,0 +1,32 @@
+,sampler_username,sampler_phone,group,filename,file_type,date,time,Hebrew,First name,Last name,email,Device,password
+0,s_dinas,9720524302751,ataxia,bucket/s_dinas/user_register_2024-05-29_13:00:37.csv,registration,2024-05-29,13:00:37,דינה שפונט,dina,spunt,,
+1,s_ilyazlat,9720547401659,pika,bucket/s_ilyazlat/user_register_2024-04-21_09:36:05.csv,registration,2024-04-21,09:36:05,איליה זלטקין,ilya,zlatkin,ilyazlat@gmail.com,אנדרואיד
+2,s_hayabaron,9720523681641,pika,bucket/s_hayabaron/user_register_2024-04-21_09:36:05.csv,registration,2024-04-21,09:36:05,חיה ברון,haya,baron,baronhaya@gmail.com,אייפון
+3,s_nadiayiz,9720544968471,pika,bucket/s_nadiayiz/user_register_2024-04-21_09:36:05.csv,registration,2024-04-21,09:36:05,נדיה יזרסקי,nadia,yizarski,nadiasan08@gmail.com,אנדרואיד
+4,s_romiz,9720549910073,ataxia,bucket/s_romiz/user_register_2024-05-29_12:56:32.csv,registration,2024-05-29,12:56:32,רומי זריאן,romi,zrian,,
+5,s_inbarkeshet,9720544314774,ataxia,bucket/s_inbarkeshet/user_register_2024-05-29_15:45:55.csv,registration,2024-05-29,15:45:55,ענבר קשת,inbar,keshet,,
+6,s_ariel,9720542050599,vv,bucket/s_ariel/user_register_2024-04-02_08:07:04.csv,registration,2024-04-02,08:07:04,אריאל שיף,ariel,schiff,ariel@vocavibe.ai,אנדרואיד
+7,s_nitzaramon,9720542213925,pika,bucket/s_nitzaramon/user_register_2024-04-21_09:36:05.csv,registration,2024-04-21,09:36:05,ניצה בירס רמון,nitza,ramon,nitza10@gmail.com,אייפון
+8,s_miriamber,9720544920331,pika,bucket/s_miriamber/user_register_2024-04-21_09:36:05.csv,registration,2024-04-21,09:36:05,מרים ברמן,miriam,berman,Mberman246@gmail.com,אייפון
+9,s_sampler,9720549776075,vv,registration,2023-06-01,00:00:00,,אלון שפירא,alon,shapira,alon@vocavibe.ai,אנדרואיד,sss123$
+10,s_esterman,9720509186988,ataxia,bucket/s_esterman/user_register_2024-06-02_19:33:33.csv,registration,2024-06-02,19:33:33,אסתר מנטסנוט,ester,mantesnut,esterm208@gmail.com,
+11,s_yael,9720524266942,vv,registration,2024-06-05,,,יעל מנור,yael,manor,yael.manor.ph.d@gmail.com,,yyy123$
+12,s_ruthros,9720502483904,ataxia,,,,,רות רוזנשטיין,ruth,rosenstein,Ruthy.rosenstein@gmail.com,,OBQ8DShH
+13,s_ellahal,9720545607036,ataxia,,,,,אלה חליפא,ella,halifa,ella1245@gmail.com,,Ah3bfnjU
+14,s_galidvir,9720542346999,ataxia,,,,,גלי דביר,gali,dvir,gali43.dvir@gmail.com,,23JPqIl8
+15,s_nofarikar,9720528795444,pika,,,,,נופר איכר,nofar,ikar,,,uRyOyAEt
+16,s_esterdas,9720549536966,pika,,,,,אסתר דסלה,ester,dasala,
+17,s_itaycohen,9720544799262,pika,,,,,איתי כהן,itay,cohen,
+18,s_yaelnavon,9720525914491,pika,,,,,יעל נבון,yael,navon
+19,s_shirandab,9720527789690,pika,,,,,שירן דבקרוב,shiran,dabacarov
+20,s_enamodeh,9720544766600,pika,,,,,ענאם עודי,enam,odeh
+21,s_galhasan,9720532752715,pika,,,,,גל חסן,gal,hasan
+22,s_alomgaviv,9720526211996,pika,,,,,אלמוג אביב,alomg,aviv
+23,s_ronmon,9720524492054,pika,,,,,רון מונטאוריאנו,ron,montioriano
+24,s_helenam,9720544762030,pika,,,,,הלן עמרן מנצור,helen,amran mantsour
+25,s_nitzantur,9720523503473,msa,,,,,ניצן טורקיה,nitzan,turkia
+26,s_nivshred,9720525013968,msa,,,,,ניב שרדני,niv,sredni
+27,s_morinfa,9720528722548,msa,,,,,מורין פחימה,morin,fahima
+28,s_sigalitsada,9720528022830,huntington,,,,,סיגלית דסה,sigalit,dasa
+29,s_michalmaimon,9720544933416,huntington,,,,,מיכל מימון,michal,maimon
+30,s_edenfatachov,9720522808159,huntington,,,,,עדן פתחוב,eden,fatchov

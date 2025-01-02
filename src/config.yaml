@@ -1,0 +1,11 @@
+gal_columns:
+  - 'called'
+  - 'answered'
+  - 'quit'
+  - 'comments'
+  - 'recall'
+  - 'answered2'
+  - 'comments2'
+  - 'recall2'
+  - 'answered3'
+  - 'comments3'

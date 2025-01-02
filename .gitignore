@@ -1,0 +1,16 @@
+src/keys.py
+*.cpython-310.pyc
+files.csv
+draft.ipynb
+draft.ipynb
+results/csv/.~lock.*
+bucket/*
+results/queries/*
+dashboard/*
+game.py
+src/analysis.py
+analysis.ipynb
+broken.png
+*.png
+vocavibe.zip
+wav2vec2/*
