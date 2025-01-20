@@ -44,11 +44,16 @@ def get_os():
 
 
 def run_shell_command(command):
+    import logging
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
     try:
         result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("Command output:", result.stdout.decode())
+        logger.info("Command output: %s", result.stdout.decode())
     except subprocess.CalledProcessError as e:
         print("Error:", e.stderr.decode())
+        logger.error("Command failed with error: %s", e.stderr.decode())
         raise
 
 

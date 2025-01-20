@@ -17,9 +17,10 @@ COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the entire src directory to the working directory
-#COPY src ./src
-#COPY resources ./resources
+
+COPY resources ./resources
+COPY src ./src
 COPY . .
-COPY /src/process_bucket.py /process_bucket.py
+#COPY /src/process_bucket.py /process_bucket.py
 # Specify the default command to run the process_bucket.py script
-CMD ["python", "./process_bucket.py"]
+CMD ["python", "./run.py"]

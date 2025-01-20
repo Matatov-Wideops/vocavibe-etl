@@ -88,20 +88,69 @@ def healthy_ec2() -> None:
 
 def users_data():
     print("\nDownloading credentials from ec2...")
-    os_type = get_os()
-    if os.environ.get('mode', None) == 'cloud':
-        pass
-    if os.environ.get('mode', None) != 'testing':
-        if os_type == "Linux" or os_type == "Darwin":
-            run_shell_command("chmod +x src/download_users.sh")
-            run_shell_command("/src/download_users.sh")
-        elif os_type == "Windows":
-            # Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
-            run_windows_shell_command("./download_users_windows.ps1")
-        else:
-            print(f"Unsupported OS: {os_type}")
-            raise SystemExit
-    
+    # os_type = get_os()
+    # if os.environ.get('mode', None) == 'cloud':
+    #     pass
+    # if os.environ.get('mode', None) != 'testing':
+    #     if os_type == "Linux" or os_type == "Darwin":
+    #         run_shell_command("chmod +x src/download_users.sh")
+    #         run_shell_command("./src/download_users.sh")
+    #     elif os_type == "Windows":
+    #         # Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+    #         run_windows_shell_command("./download_users_windows.ps1")
+    #     else:
+    #         print(f"Unsupported OS: {os_type}")
+    #         raise SystemExit
+    import paramiko
+    PEM_FILE = "./build.pem"
+    EC2_USER = "nikita_m2"
+    EC2_HOST = "35.221.31.111"
+    CONTAINER_NAME = "klt-vocapp-frhp"
+    REMOTE_FILE_PATH1 = "/data/.usershc.csv"
+    EC2_LOCAL_PATH1 = "/home/nikita_m2/.usershc.csv"
+    LOCAL_FILE_PATH1 = "./resources/usershc.csv"
+    REMOTE_FILE_PATH2 = "/data/.userspd.csv"
+    EC2_LOCAL_PATH2 = "/home/nikita_m2/.userspd.csv"
+    LOCAL_FILE_PATH2 = "./resources/userspd.csv"
+    os.chmod(PEM_FILE, 0o600)
+
+    def execute_ssh_command(ssh_client, command):
+        """Execute a command over SSH."""
+        stdin, stdout, stderr = ssh_client.exec_command(command)
+        output = stdout.read().decode()
+        error = stderr.read().decode()
+        if error:
+            raise Exception(f"Command failed: {error}")
+        return output
+
+    try:
+        # Initialize SSH client
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(hostname=EC2_HOST, username=EC2_USER, key_filename=PEM_FILE)
+
+        # Copy files from Docker container to EC2 instance
+        print("Copying files from Docker container to EC2 instance...")
+        docker_copy_command1 = f"sudo docker cp {CONTAINER_NAME}:{REMOTE_FILE_PATH1} {EC2_LOCAL_PATH1}"
+        docker_copy_command2 = f"sudo docker cp {CONTAINER_NAME}:{REMOTE_FILE_PATH2} {EC2_LOCAL_PATH2}"
+        execute_ssh_command(ssh, docker_copy_command1)
+        execute_ssh_command(ssh, docker_copy_command2)
+        print("Files copied from container to EC2 instance successfully.")
+
+        # Download files from EC2 instance to local machine
+        print("Downloading files to local machine...")
+        with paramiko.SFTPClient.from_transport(ssh.get_transport()) as sftp:
+            sftp.get(EC2_LOCAL_PATH1, LOCAL_FILE_PATH1)
+            sftp.get(EC2_LOCAL_PATH2, LOCAL_FILE_PATH2)
+        print("Files downloaded to local machine successfully.")
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        ssh.close()
+
+
+
     combine_yahav_ec2()
     healthy_ec2()
 
@@ -694,7 +743,29 @@ def get_all_users(df: pd.DataFrame) -> pd.DataFrame:
     df = df.reset_index(drop=True)
     return df
 
+def normalize_paradigm(paradigm):
+    if pd.isna(paradigm):
+        return None
 
+        # Convert bytes-like representations (e.g., B'...')
+    if isinstance(paradigm, bytes):
+        paradigm = paradigm.decode('utf-8', errors='ignore')
+
+    #     # Remove surrounding brackets and redundant characters
+    # paradigm = re.sub(r"^\[|\]$", "", paradigm)
+
+    # Replace \r\n and \n with spaces
+    paradigm = paradigm.replace("\\r\\n", " ").replace("\\n", " ").replace("\r\n", " ").replace("\n", " ")
+
+    # # Remove any unnecessary repeated characters (like B', B', B')
+    # paradigm = re.sub(r"B'(B')*|B+", "", paradigm)
+
+    # Remove duplicate spaces
+    paradigm = re.sub(r"\s+", " ", paradigm)
+
+    # Strip leading and trailing whitespace
+    paradigm = paradigm.strip()
+    return paradigm
 
 
 def get_all_files():
@@ -724,30 +795,55 @@ def get_all_files():
     df = add_age(df)
     df = add_updrs_columns(df)
     df = df.sort_values(by=['date', 'username', 'time'], ascending=False)
-    df.to_csv(Settings.ALL_FILES, index=False)
-    
+
+    client = bigquery.Client()
+    table_ref = f"vocaapp-440108.vocaapp_dataset.all_files"
+    job_config = bigquery.LoadJobConfig(
+        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,  # Overwrite the table if it exists
+        source_format=bigquery.SourceFormat.CSV,
+    )
+    job = client.load_table_from_dataframe(df, table_ref, job_config=job_config)
+
+    job.result()
+
     sessions = get_sessions(df)
     sessions.to_csv(Settings.SESSIONS, index=False)
     real_sessions = get_sessions(real_sessions)
-    real_sessions.to_csv(Settings.REAL_SESSIONS, index=False)
+
+    real_sessions['paradigm'] = real_sessions['paradigm'].apply(normalize_paradigm)
+
+
+    real_sessions.rename(columns={'start': 'start_time'}, inplace=True)
+    real_sessions.rename(columns={'end': 'end_time'}, inplace=True)
+
+
+    table_ref = f"vocaapp-440108.vocaapp_dataset.all_sessions"
+    job_config = bigquery.LoadJobConfig(
+        source_format=bigquery.SourceFormat.CSV,
+        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,  # or "WRITE_TRUNCATE"
+    )
+
+
+    job = client.load_table_from_dataframe(real_sessions, table_ref, job_config=job_config)
+    job.result()
 
     all_users = get_all_users(df)
-    # all_users.to_csv('../'+Settings.ALL_USERS, index=False)
+
     client = bigquery.Client()
     table_ref = f"vocaapp-440108.vocaapp_dataset.all_users"
     all_users["year_of_diagnosis"] = pd.to_datetime(
         all_users["year_of_diagnosis"], errors="coerce"
-    ).dt.date  # Convert to DATE
+    ).dt.date
 
-    # Replace NaT with a default valid date or drop rows with NaT
+
     all_users["year_of_diagnosis"] = all_users["year_of_diagnosis"].fillna(pd.Timestamp("1900-01-01").date())
 
-    # Convert other date/time fields as needed
+
     all_users["date"] = pd.to_datetime(all_users["date"], errors="coerce").dt.date
     all_users["time"] = pd.to_datetime(all_users["time"], errors="coerce").dt.time
     all_users["datetime"] = pd.to_datetime(all_users["datetime"], errors="coerce")
 
-    # Clean invalid rows if necessary
+
     all_users = all_users.dropna(subset=["year_of_diagnosis", "date", "datetime"])
     job_config = bigquery.LoadJobConfig(
         write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,  # Overwrite the table if it exists
@@ -756,7 +852,6 @@ def get_all_files():
     job = client.load_table_from_dataframe(all_users, table_ref, job_config=job_config)
 
     job.result()
-
 
 
 
@@ -931,19 +1026,23 @@ def color_sessions():
 
 
 def main(): #TODO Make as entry point of function
-    print('start')
-    # get_bucket(skip=False)
-    # users_data()
-    # get_raw_data()
+
+    print('Started')
+    get_bucket(skip=False)
+    users_data()
+    get_raw_data()
     get_all_files()
     # color_sessions()
-
-
     print("Completed!")
 
 
-if __name__ == "__main__":
-    main()
-   
 
 
+#
+# if __name__ == "__main__":
+#     try:
+#         main()
+#         return 'Completed!'
+#     except Exception as e:
+#         return str(e)
+#
