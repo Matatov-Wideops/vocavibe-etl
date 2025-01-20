@@ -8,7 +8,7 @@ from src.database import Bucket, Registration, Update, Qnnrs, Entity
 
 
 def remove_usernames(raw: pd.DataFrame) -> pd.DataFrame:
-    bl = pd.read_csv('../'+Settings.BLACKLIST, dtype=str)
+    bl = pd.read_csv(Settings.BLACKLIST, dtype=str)
     users = bl.loc[bl['category']=='user','entry'].tolist()
     rows = raw[raw.username.isin(users)]
     if not rows.index.empty:
@@ -19,7 +19,7 @@ def remove_usernames(raw: pd.DataFrame) -> pd.DataFrame:
 
 
 def remove_sessions(raw: pd.DataFrame) -> pd.DataFrame:
-    bl = pd.read_csv('../'+Settings.BLACKLIST, dtype=str)
+    bl = pd.read_csv(Settings.BLACKLIST, dtype=str)
     users = bl.loc[bl['category']=='session', 'username'].tolist()
     sessions = bl.loc[bl['category']=='session', 'entry'].tolist()
     for user,session in zip(users,sessions):
@@ -32,7 +32,7 @@ def remove_sessions(raw: pd.DataFrame) -> pd.DataFrame:
 
 
 def remove_files(raw: pd.DataFrame) -> pd.DataFrame:
-    bl = pd.read_csv('../'+Settings.BLACKLIST, dtype=str)
+    bl = pd.read_csv(Settings.BLACKLIST, dtype=str)
     files = bl.loc[bl['category']=='file','entry'].tolist()
     rows = raw[raw.filekey.isin(files)]
     if not rows.index.empty:
@@ -99,7 +99,7 @@ def resolve_updrs_filenames(raw: pd.DataFrame) -> pd.DataFrame:
 
 
 def change_columns(raw: pd.DataFrame):
-    replacements = pd.read_csv('../'+Settings.REPLACEMENTS, dtype=str)
+    replacements = pd.read_csv(Settings.REPLACEMENTS, dtype=str)
     for _, row in replacements.iterrows():
         filekey = row['filekey']
         column = row['column']
@@ -112,16 +112,16 @@ def change_columns(raw: pd.DataFrame):
 
 #################### FILES ########################
 def match_sessions(changes: List[Tuple[str]]) -> None:
-    df = pd.read_csv('../'+Settings.ALL_FILES, dtype=str)
+    df = pd.read_csv(Settings.ALL_FILES, dtype=str)
     for change in changes:
         df.loc[df['filekey']==change[0], 'session'] = change[1]
-    df.to_csv('../'+Settings.ALL_FILES, index=False)
+    df.to_csv(Settings.ALL_FILES, index=False)
 
 
     
 
 def merge_sessions_into_early(username, early_session, late_session, how='early'):
-    df = pd.read_csv('../'+Settings.ALL_FILES, dtype=str)
+    df = pd.read_csv(Settings.ALL_FILES, dtype=str)
     late_session_df = df[(df['username'] == username) & (df['session'] == late_session)].copy() # & (df['pattern'] == 'RECORDING')]
     
     if not late_session_df.empty:
@@ -139,17 +139,17 @@ def merge_sessions_into_early(username, early_session, late_session, how='early'
 
 
 def replace_session_number(username: str, current_number: str, new_number: str) -> None:
-    df = pd.read_csv('../'+Settings.ALL_FILES, dtype=str)
+    df = pd.read_csv(Settings.ALL_FILES, dtype=str)
     session_df = df[(df['username'] == username) & (df['session'] == current_number)]
     df.loc[session_df.index, 'session'] = new_number
-    df.to_csv('../'+Settings.ALL_FILES, index=False)
+    df.to_csv(Settings.ALL_FILES, index=False)
 
 
 def change_user_property_in_all_files(username: str, column: str, new_value: str) -> None:
-    df = pd.read_csv('../'+Settings.ALL_FILES, dtype=str)
+    df = pd.read_csv(Settings.ALL_FILES, dtype=str)
     user_df = df[df['username'] == username]
     df.loc[user_df.index, column] = new_value
-    df.to_csv('../'+Settings.ALL_FILES, index=False)
+    df.to_csv(Settings.ALL_FILES, index=False)
 
 
 ######################################################################################################################
@@ -206,7 +206,7 @@ def update_session_and_timing(df: pd.DataFrame, username: str, session: str, new
 
 
 def resolve_sessions(df):
-    sessions2update = pd.read_csv('../'+Settings.UPDATE_SESSIONS, dtype=str)
+    sessions2update = pd.read_csv(Settings.UPDATE_SESSIONS, dtype=str)
     for _,row in sessions2update.iterrows():
         timing = None if pd.isna(row['new_timing']) else row['new_timing']
         df = update_session_and_timing(df, username=row['username'],

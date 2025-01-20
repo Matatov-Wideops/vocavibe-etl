@@ -17,7 +17,7 @@ from datetime import datetime
 
 from src.settings import Settings
 from src.keys import Keys
-from src.query import list_bucket_for_user
+# from src.query import list_bucket_for_user
 
 # from settings import Settings
 # from keys import Keys
@@ -88,7 +88,7 @@ def standardize_phone_number(phone_number: str) -> str:
 
 
 
-samplers = pd.read_csv('../' + Settings.SAMPLERS_CSV, dtype=str, usecols=['sampler_phone', 'sampler_username', 'Hebrew'])
+samplers = pd.read_csv(Settings.SAMPLERS_CSV, dtype=str, usecols=['sampler_phone', 'sampler_username', 'Hebrew'])
 the_dict = samplers.set_index('sampler_phone')['sampler_username'].to_dict()
 def sampler_phone_to_name(x):
         y = str(x).replace("+", "")

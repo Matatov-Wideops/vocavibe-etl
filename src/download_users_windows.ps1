@@ -1,13 +1,13 @@
 # Define variables
-$PEM_FILE = "../build-key.pem"
-$EC2_USER = "ec2-user"
-$EC2_HOST = "ec2-3-83-206-91.compute-1.amazonaws.com"
-$CONTAINER_NAME = "vocabe"
+$PEM_FILE = "C:\\Users\\Nikita\\Desktop\\build.pem"
+$EC2_USER = "nikita_m2"
+$EC2_HOST = "35.221.31.111"
+$CONTAINER_NAME = "klt-vocapp-frhp"
 $REMOTE_FILE_PATH1 = "/data/.usershc.csv"
-$EC2_LOCAL_PATH1 = "/home/ec2-user/.usershc.csv"
-$LOCAL_FILE_PATH1 = "resources/usershc.csv"
+$EC2_LOCAL_PATH1 = "/home/nikita_m2/.usershc.csv"
+$LOCAL_FILE_PATH1 = "../resources/usershc.csv"
 $REMOTE_FILE_PATH2 = "/data/.userspd.csv"
-$EC2_LOCAL_PATH2 = "/home/ec2-user/.userspd.csv"
+$EC2_LOCAL_PATH2 = "/home/nikita_m2/.userspd.csv"
 $LOCAL_FILE_PATH2 = "resources/userspd.csv"
 
 # Log into AWS EC2 and copy the file from the Docker container to the EC2 instance's home directory

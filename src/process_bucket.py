@@ -1,9 +1,11 @@
+import time
+
 import boto3
 import os
 from os.path import exists
 import re
 
-from google.cloud import storage
+from google.cloud import storage, bigquery
 from tqdm import tqdm
 import pandas as pd
 import tempfile
@@ -33,14 +35,14 @@ plt.ioff()  # Turn off interactive mode
 
 
 def combine_yahav_ec2() -> None:
-    pd_yahav = pd.read_csv('../'+Settings.USERS_YAHAV_CSV, dtype=str, index_col=0)
+    pd_yahav = pd.read_csv(Settings.USERS_YAHAV_CSV, dtype=str, index_col=0)
     pd_yahav[ExtraCols.PASSWORD.value] = np.nan
-    pd_ec2 = pd.read_csv('../'+Settings.USERSPD, dtype=str)
+    pd_ec2 = pd.read_csv(Settings.USERSPD, dtype=str)
     pd_ec2.columns = [ExtraCols.USER_PHONE.value, ExtraCols.PASSWORD.value]
     pd_ec2['username'] = pd_ec2[ExtraCols.USER_PHONE.value].apply(hash_phone_number)
     combo = pd.concat([pd_yahav, pd_ec2], ignore_index=True)
 
-    phonesNpasswords = pd.read_csv('../resources/passwords.csv', dtype=str)
+    phonesNpasswords = pd.read_csv('resources/passwords.csv', dtype=str)
     # Merge the dataframes on ExtraCols.USER_PHONE.value with an outer join to ensure all users are included
     combined_df = pd.merge(combo, phonesNpasswords, on=ExtraCols.USER_PHONE.value, how='outer', suffixes=('_users', '_passwords'))
 
@@ -58,17 +60,17 @@ def combine_yahav_ec2() -> None:
     # Drop duplicates, keeping the first occurrence (which will have the password if available)
     combined_df = combined_df.drop_duplicates(subset=ExtraCols.USER_PHONE.value, keep='last', ignore_index=True)
     # combined_df = combined_df.reset_index(drop=True)
-    combined_df.to_csv('../'+Settings.USERS_EC2_CSV)
+    combined_df.to_csv(Settings.USERS_EC2_CSV)
 
 
 
 def healthy_ec2() -> None:
-    hc_ec2 = pd.read_csv('../'+Settings.USERSHC, dtype=str)
+    hc_ec2 = pd.read_csv(Settings.USERSHC, dtype=str)
     hc_ec2.columns = [ExtraCols.USER_PHONE.value, ExtraCols.PASSWORD.value]
     hc_ec2[Bucket.USERNAME] = hc_ec2[ExtraCols.USER_PHONE.value].apply(hash_phone_number)
     hc_ec2[Bucket.USERNAME] = "hc_" + hc_ec2[Bucket.USERNAME]
 
-    tocat = pd.read_csv('../'+Settings.HC_PHONES_CSV, dtype=str, index_col=0)
+    tocat = pd.read_csv(Settings.HC_PHONES_CSV, dtype=str, index_col=0)
     tocat[ExtraCols.PASSWORD.value] = np.nan
     hc_ec2 = pd.concat([hc_ec2, tocat], ignore_index=True)
 
@@ -80,7 +82,7 @@ def healthy_ec2() -> None:
     # Drop duplicates, keeping the first occurrence (which will have the password if available)
     hc_ec2 = hc_ec2.drop_duplicates(subset=ExtraCols.USER_PHONE.value, keep='last', ignore_index=True)
     # hc_ec2 = hc_ec2.reset_index(drop=True)
-    hc_ec2.to_csv('../'+Settings.HC_EC2_CSV)
+    hc_ec2.to_csv(Settings.HC_EC2_CSV)
 
 
 
@@ -92,7 +94,7 @@ def users_data():
     if os.environ.get('mode', None) != 'testing':
         if os_type == "Linux" or os_type == "Darwin":
             run_shell_command("chmod +x src/download_users.sh")
-            run_shell_command("./src/download_users.sh")
+            run_shell_command("/src/download_users.sh")
         elif os_type == "Windows":
             # Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
             run_windows_shell_command("./download_users_windows.ps1")
@@ -224,7 +226,7 @@ def get_bucket(skip=True) -> None:
     if dfs:
         dfs = pd.concat(dfs, ignore_index=True)
         bucket = pd.concat([bucket, dfs], ignore_index=True)
-        bucket.to_csv('../'+Settings.BUCKET_CSV, index=False)
+        bucket.to_csv(Settings.BUCKET_CSV, index=False)
     
     
 
@@ -238,7 +240,10 @@ def download_csv_to_df(filekey: str, bucket_name = Settings.BUCKET_NAME, s3 = No
     
     try:
         # Download the file from S3 to the temporary location
-        s3.download_file(bucket_name, filekey, temp_file_name)
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(filekey)
+        blob.download_to_filename(temp_file_name)
         fernet = Fernet(ENCRYPTION_KEY)
         with open(temp_file_name, 'rb') as file:
             encrypted_data = file.read()
@@ -278,23 +283,23 @@ def get_raw_data(skip=True, print_filekey=False):
             print("The DataFrame does not contain a 'filekey' column.")
         return df
 
-    bucket = pd.read_csv('../'+Settings.BUCKET_CSV, dtype=str)
-    raw = pd.read_csv('../'+Settings.RAW_CSV, dtype=str) if exists('../'+Settings.RAW_CSV) else pd.DataFrame()
-    if exists('../'+Settings.RAW_CSV):
+    bucket = pd.read_csv(Settings.BUCKET_CSV, dtype=str)
+    raw = pd.read_csv(Settings.RAW_CSV, dtype=str) if exists(Settings.RAW_CSV) else pd.DataFrame()
+    if exists(Settings.RAW_CSV):
         new_filekeys = bucket.loc[~bucket[Bucket.FILEKEY].isin(raw[Bucket.FILEKEY])].copy()
     else:
         new_filekeys = bucket.copy()
     
 
-    updrs = check_exist_and_return('../'+Settings.UPDRS_CSV)
-    moca = check_exist_and_return('../'+Settings.MOCA_CSV)
-    pdq8 = check_exist_and_return('../'+Settings.PDQ8_CSV)
-    fog = check_exist_and_return('../'+Settings.FOG_CSV)
-    sdq = check_exist_and_return('../'+Settings.SDQ_CSV)
-    woq = check_exist_and_return('../'+Settings.WOQ_CSV)
-    registration = check_exist_and_return('../'+Settings.REGISTRATION_CSV)
-    update = check_exist_and_return('../'+Settings.UPDATE_CSV)
-    medications = check_exist_and_return('../'+Settings.MEDICATION_CSV)
+    updrs = check_exist_and_return(Settings.UPDRS_CSV)
+    moca = check_exist_and_return(Settings.MOCA_CSV)
+    pdq8 = check_exist_and_return(Settings.PDQ8_CSV)
+    fog = check_exist_and_return(Settings.FOG_CSV)
+    sdq = check_exist_and_return(Settings.SDQ_CSV)
+    woq = check_exist_and_return(Settings.WOQ_CSV)
+    registration = check_exist_and_return(Settings.REGISTRATION_CSV)
+    update = check_exist_and_return(Settings.UPDATE_CSV)
+    medications = check_exist_and_return(Settings.MEDICATION_CSV)
 
     for ii,row in tqdm(new_filekeys.iterrows(), desc="Extracting raw data", total=len(new_filekeys)):
         filekey = row[Bucket.FILEKEY]
@@ -404,19 +409,19 @@ def get_raw_data(skip=True, print_filekey=False):
                 medications = pd.concat([medications, df.astype(str)], ignore_index=True)
 
         
-    updrs.to_csv('../'+Settings.UPDRS_CSV, index=False)
-    moca.to_csv('../'+Settings.MOCA_CSV, index=False)
-    pdq8.to_csv('../'+Settings.PDQ8_CSV, index=False)
-    fog.to_csv('../'+Settings.FOG_CSV, index=False)
-    sdq.to_csv('../'+Settings.SDQ_CSV, index=False)
-    woq.to_csv('../'+Settings.WOQ_CSV, index=False)
-    update.to_csv('../'+Settings.UPDATE_CSV, index=False)
-    registration.to_csv('../'+Settings.REGISTRATION_CSV, index=False)
-    medications.to_csv('../'+Settings.MEDICATION_CSV, index=False)
+    updrs.to_csv(Settings.UPDRS_CSV, index=False)
+    moca.to_csv(Settings.MOCA_CSV, index=False)
+    pdq8.to_csv(Settings.PDQ8_CSV, index=False)
+    fog.to_csv(Settings.FOG_CSV, index=False)
+    sdq.to_csv(Settings.SDQ_CSV, index=False)
+    woq.to_csv(Settings.WOQ_CSV, index=False)
+    update.to_csv(Settings.UPDATE_CSV, index=False)
+    registration.to_csv(Settings.REGISTRATION_CSV, index=False)
+    medications.to_csv(Settings.MEDICATION_CSV, index=False)
 
     raw = pd.concat([raw, new_filekeys], ignore_index=True)
     raw = raw.sort_values(by=['date', 'username', 'time'], ascending=False, ignore_index=True)
-    raw.to_csv('../'+Settings.RAW_CSV, index=False)
+    raw.to_csv(Settings.RAW_CSV, index=False)
 
 
 
@@ -529,7 +534,7 @@ def sampler_paradigm(session_df: pd.DataFrame, counter: bool = False) -> str:
 
 
 def add_sampler_phone(df):
-    samplers = pd.read_csv('../'+Settings.SAMPLERS_CSV, dtype=str, usecols=[Bucket.SAMPLER, ExtraCols.SAMPLER_USERNAME, ExtraCols.HEBREW])
+    samplers = pd.read_csv(Settings.SAMPLERS_CSV, dtype=str, usecols=[Bucket.SAMPLER, ExtraCols.SAMPLER_USERNAME, ExtraCols.HEBREW])
     df[Bucket.SAMPLER] = df[Bucket.SAMPLER].apply(sampler_phone_to_name)
     df.rename(columns={Bucket.SAMPLER: ExtraCols.SAMPLER_USERNAME}, inplace=True)
     df = pd.merge(df, samplers, how='left', on=[ExtraCols.SAMPLER_USERNAME])
@@ -537,20 +542,20 @@ def add_sampler_phone(df):
 
 
 def add_patient_phone(df):
-    phones_pd = pd.read_csv('../'+Settings.USERS_EC2_CSV, dtype=str, usecols=[ExtraCols.USER_PHONE, Bucket.USERNAME, ExtraCols.PASSWORD])
-    phones_hc = pd.read_csv('../'+Settings.HC_EC2_CSV, dtype=str, usecols=[ExtraCols.USER_PHONE, Bucket.USERNAME, ExtraCols.PASSWORD])
+    phones_pd = pd.read_csv(Settings.USERS_EC2_CSV, dtype=str, usecols=[ExtraCols.USER_PHONE, Bucket.USERNAME, ExtraCols.PASSWORD])
+    phones_hc = pd.read_csv(Settings.HC_EC2_CSV, dtype=str, usecols=[ExtraCols.USER_PHONE, Bucket.USERNAME, ExtraCols.PASSWORD])
     phones = pd.concat([phones_pd, phones_hc], ignore_index=True)
     df = pd.merge(df, phones, how='left', on=[Bucket.USERNAME])
     return df 
 
 
 def add_caregiver_phone(df):
-    sheba = pd.read_csv('../'+Settings.SHEBA_DATABASE, dtype=str)
+    sheba = pd.read_csv(Settings.SHEBA_DATABASE, dtype=str)
     sheba['caregiver'] = sheba['caregiver'].apply(standardize_phone_number)
     sheba['טלפון'] = sheba['טלפון'].apply(standardize_phone_number)
     sheba = sheba[['טלפון', 'caregiver']]
     sheba.columns = [ExtraCols.USER_PHONE, ExtraCols.CAREGIVER_PHONE]
-    ichilov = pd.read_csv('../'+Settings.ICHILOV_DATABASE, dtype=str)
+    ichilov = pd.read_csv(Settings.ICHILOV_DATABASE, dtype=str)
     ichilov['caregiver'] = ichilov['caregiver'].apply(standardize_phone_number)
     ichilov['טלפון'] = ichilov['טלפון'].apply(standardize_phone_number)
     ichilov = ichilov[['טלפון', 'caregiver']]
@@ -694,7 +699,7 @@ def get_all_users(df: pd.DataFrame) -> pd.DataFrame:
 
 def get_all_files():
     print("Arranging data ...", end=' ')
-    df = pd.read_csv('../'+Settings.RAW_CSV, dtype=str)
+    df = pd.read_csv(Settings.RAW_CSV, dtype=str)
     df = change_columns(df)
     df = resolve(df)
 
@@ -719,15 +724,38 @@ def get_all_files():
     df = add_age(df)
     df = add_updrs_columns(df)
     df = df.sort_values(by=['date', 'username', 'time'], ascending=False)
-    df.to_csv('../'+Settings.ALL_FILES, index=False)
+    df.to_csv(Settings.ALL_FILES, index=False)
     
     sessions = get_sessions(df)
-    sessions.to_csv('../'+Settings.SESSIONS, index=False)
+    sessions.to_csv(Settings.SESSIONS, index=False)
     real_sessions = get_sessions(real_sessions)
-    real_sessions.to_csv('../'+Settings.REAL_SESSIONS, index=False)
+    real_sessions.to_csv(Settings.REAL_SESSIONS, index=False)
 
     all_users = get_all_users(df)
-    all_users.to_csv('../'+Settings.ALL_USERS, index=False)
+    # all_users.to_csv('../'+Settings.ALL_USERS, index=False)
+    client = bigquery.Client()
+    table_ref = f"vocaapp-440108.vocaapp_dataset.all_users"
+    all_users["year_of_diagnosis"] = pd.to_datetime(
+        all_users["year_of_diagnosis"], errors="coerce"
+    ).dt.date  # Convert to DATE
+
+    # Replace NaT with a default valid date or drop rows with NaT
+    all_users["year_of_diagnosis"] = all_users["year_of_diagnosis"].fillna(pd.Timestamp("1900-01-01").date())
+
+    # Convert other date/time fields as needed
+    all_users["date"] = pd.to_datetime(all_users["date"], errors="coerce").dt.date
+    all_users["time"] = pd.to_datetime(all_users["time"], errors="coerce").dt.time
+    all_users["datetime"] = pd.to_datetime(all_users["datetime"], errors="coerce")
+
+    # Clean invalid rows if necessary
+    all_users = all_users.dropna(subset=["year_of_diagnosis", "date", "datetime"])
+    job_config = bigquery.LoadJobConfig(
+        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,  # Overwrite the table if it exists
+        source_format=bigquery.SourceFormat.CSV,
+    )
+    job = client.load_table_from_dataframe(all_users, table_ref, job_config=job_config)
+
+    job.result()
 
 
 
@@ -761,7 +789,7 @@ def get_caregiver_phone(sessions_df: pd.DataFrame) -> str:
             sessions_df.loc[pd_index, 'caregiver_paradigm'] = hc_full
 
     # match caregiver PHONE from recorded healthy
-    healthy = pd.read_csv('../'+Settings.USERS_CSV, dtype=str)
+    healthy = pd.read_csv(Settings.USERS_CSV, dtype=str)
     filtered_healthy = healthy.dropna(subset=['user_phone'])
     healthy_dict = filtered_healthy.set_index('username')['user_phone'].to_dict()
 
@@ -836,7 +864,7 @@ def get_sessions(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def color_sessions():
-    sessions_df = pd.read_csv('../'+Settings.SESSIONS, dtype=str)
+    sessions_df = pd.read_csv(Settings.SESSIONS, dtype=str)
     wb = Workbook()
     ws = wb.active
 
@@ -893,7 +921,7 @@ def color_sessions():
         ws.column_dimensions[column].width = adjusted_width
 
     # Save the workbook
-    wb.save('../'+Settings.COLORED_SESSIONS)
+    wb.save(Settings.COLORED_SESSIONS)
 
 
 
@@ -903,11 +931,14 @@ def color_sessions():
 
 
 def main(): #TODO Make as entry point of function
-    # get_bucket()
-    users_data()
+    print('start')
+    # get_bucket(skip=False)
+    # users_data()
     # get_raw_data()
-    # get_all_files()
+    get_all_files()
     # color_sessions()
+
+
     print("Completed!")
 
 
